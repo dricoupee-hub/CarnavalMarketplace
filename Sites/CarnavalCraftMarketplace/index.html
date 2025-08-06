@@ -1,0 +1,1183 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CarnivalCraft - Marketplace for Carnival Groups</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        // Load real products from API and display them
+        async function loadRealProducts() {
+            try {
+                console.log('📦 Loading real products from API...');
+                const response = await apiCall('/products');
+                console.log('Products response:', response);
+                
+                const apiProducts = response.products || [];
+                
+                if (apiProducts.length > 0) {
+                    // Replace sample products with real ones
+                    products.length = 0; // Clear array
+                    
+                    apiProducts.forEach(product => {
+                        products.push({
+                            id: product.id,
+                            title: product.title,
+                            category: product.Category?.slug || 'general',
+                            price: parseFloat(product.price),
+                            group: product.seller?.CarnivalGroup?.name || 'Unknown Group',
+                            city: product.seller?.CarnivalGroup?.city || 'Unknown City',
+                            emoji: product.Category?.emoji || '🎭',
+                            seller: `${product.seller?.firstName} ${product.seller?.lastName}`
+                        });
+                    });
+                    
+                    console.log(`✅ Loaded ${apiProducts.length} real products`);
+                    displayProducts(); // Refresh the display
+                } else {
+                    console.log('📦 No products found, showing sample data');
+                }
+            } catch (error) {
+                console.error('❌ Failed to load products:', error);
+                console.log('📦 Using sample products as fallback');
+            }
+        }
+            try {
+                console.log('📂 Loading categories from API...');
+                const response = await apiCall('/categories');
+                console.log('Categories response:', response);
+                
+                const categories = response.categories || response;
+                
+                const select = document.querySelector('select[name="categoryId"]');
+                if (select && categories.length > 0) {
+                    // Clear existing options
+                    select.innerHTML = '<option value="">Select category</option>';
+                    
+                    categories.forEach(category => {
+                        const option = document.createElement('option');
+                        option.value = category.id;
+                        option.textContent = `${category.emoji} ${category.name}`;
+                        select.appendChild(option);
+                        console.log(`Added category: ${category.name} (ID: ${category.id})`);
+                    });
+                    
+                    console.log(`✅ Loaded ${categories.length} categories`);
+                } else {
+                    console.error('❌ No categories found or select element not found');
+                }
+            } catch (error) {
+                console.error('❌ Failed to load categories:', error);
+            }
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        header {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            border-radius: 20px;
+            padding: 20px;
+            margin-bottom: 30px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+        }
+
+        .header-content {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 20px;
+        }
+
+        .logo {
+            font-size: 2rem;
+            font-weight: bold;
+            background: linear-gradient(45deg, #ff6b6b, #4ecdc4);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .nav-buttons {
+            display: flex;
+            gap: 15px;
+            flex-wrap: wrap;
+        }
+
+        .btn {
+            padding: 12px 24px;
+            border: none;
+            border-radius: 25px;
+            cursor: pointer;
+            font-weight: 600;
+            transition: all 0.3s ease;
+            text-decoration: none;
+            display: inline-block;
+            text-align: center;
+        }
+
+        .btn-primary {
+            background: linear-gradient(45deg, #ff6b6b, #ee5a24);
+            color: white;
+        }
+
+        .btn-secondary {
+            background: linear-gradient(45deg, #4ecdc4, #44a08d);
+            color: white;
+        }
+
+        .btn-outline {
+            background: transparent;
+            border: 2px solid #667eea;
+            color: #667eea;
+        }
+
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
+        }
+
+        .main-content {
+            display: grid;
+            grid-template-columns: 250px 1fr;
+            gap: 30px;
+            align-items: start;
+        }
+
+        .sidebar {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            border-radius: 20px;
+            padding: 25px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+            position: sticky;
+            top: 20px;
+        }
+
+        .sidebar h3 {
+            margin-bottom: 20px;
+            color: #333;
+            border-bottom: 3px solid #ff6b6b;
+            padding-bottom: 10px;
+        }
+
+        .category-list {
+            list-style: none;
+        }
+
+        .category-item {
+            padding: 12px 0;
+            cursor: pointer;
+            border-bottom: 1px solid #eee;
+            transition: all 0.3s ease;
+            color: #666;
+        }
+
+        .category-item:hover,
+        .category-item.active {
+            color: #ff6b6b;
+            transform: translateX(5px);
+        }
+
+        .products-section {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            border-radius: 20px;
+            padding: 30px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+        }
+
+        .section-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 25px;
+            flex-wrap: wrap;
+            gap: 15px;
+        }
+
+        .search-bar {
+            display: flex;
+            gap: 10px;
+            flex: 1;
+            max-width: 400px;
+        }
+
+        .search-input {
+            flex: 1;
+            padding: 12px 20px;
+            border: 2px solid #e0e0e0;
+            border-radius: 25px;
+            font-size: 16px;
+            transition: border-color 0.3s ease;
+        }
+
+        .search-input:focus {
+            outline: none;
+            border-color: #ff6b6b;
+        }
+
+        .products-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+            gap: 25px;
+        }
+
+        .product-card {
+            background: white;
+            border-radius: 15px;
+            overflow: hidden;
+            box-shadow: 0 5px 20px rgba(0, 0, 0, 0.1);
+            transition: all 0.3s ease;
+            cursor: pointer;
+        }
+
+        .product-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.15);
+        }
+
+        .product-image {
+            width: 100%;
+            height: 200px;
+            background: linear-gradient(45deg, #ff9a9e, #fecfef);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 3rem;
+            color: white;
+        }
+
+        .product-info {
+            padding: 20px;
+        }
+
+        .product-title {
+            font-size: 1.2rem;
+            font-weight: 600;
+            margin-bottom: 8px;
+            color: #333;
+        }
+
+        .product-group {
+            color: #666;
+            font-size: 0.9rem;
+            margin-bottom: 10px;
+        }
+
+        .product-price {
+            font-size: 1.4rem;
+            font-weight: bold;
+            color: #ff6b6b;
+            margin-bottom: 15px;
+        }
+
+        .product-actions {
+            display: flex;
+            gap: 10px;
+        }
+
+        .btn-small {
+            padding: 8px 16px;
+            font-size: 0.9rem;
+            flex: 1;
+        }
+
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.8);
+            backdrop-filter: blur(5px);
+            z-index: 1000;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .modal.active {
+            display: flex;
+        }
+
+        .modal-content {
+            background: white;
+            border-radius: 20px;
+            padding: 30px;
+            max-width: 500px;
+            width: 90%;
+            max-height: 80vh;
+            overflow-y: auto;
+            position: relative;
+        }
+
+        .close-btn {
+            position: absolute;
+            top: 15px;
+            right: 20px;
+            background: none;
+            border: none;
+            font-size: 1.5rem;
+            cursor: pointer;
+            color: #666;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 600;
+            color: #333;
+        }
+
+        .form-group input,
+        .form-group select,
+        .form-group textarea {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #e0e0e0;
+            border-radius: 10px;
+            font-size: 16px;
+            transition: border-color 0.3s ease;
+        }
+
+        .form-group input:focus,
+        .form-group select:focus,
+        .form-group textarea:focus {
+            outline: none;
+            border-color: #ff6b6b;
+        }
+
+        .payment-methods {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(100px, 1fr));
+            gap: 15px;
+            margin-top: 20px;
+        }
+
+        .payment-method {
+            padding: 15px;
+            border: 2px solid #e0e0e0;
+            border-radius: 10px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .payment-method:hover,
+        .payment-method.selected {
+            border-color: #ff6b6b;
+            background: rgba(255, 107, 107, 0.1);
+        }
+
+        .floating-add-btn {
+            position: fixed;
+            bottom: 30px;
+            right: 30px;
+            width: 60px;
+            height: 60px;
+            background: linear-gradient(45deg, #ff6b6b, #ee5a24);
+            border: none;
+            border-radius: 50%;
+            color: white;
+            font-size: 1.5rem;
+            cursor: pointer;
+            box-shadow: 0 5px 20px rgba(255, 107, 107, 0.4);
+            transition: all 0.3s ease;
+            z-index: 100;
+        }
+
+        .floating-add-btn:hover {
+            transform: scale(1.1);
+            box-shadow: 0 8px 25px rgba(255, 107, 107, 0.6);
+        }
+
+        @media (max-width: 768px) {
+            .main-content {
+                grid-template-columns: 1fr;
+            }
+            
+            .sidebar {
+                position: static;
+            }
+            
+            .header-content {
+                text-align: center;
+            }
+            
+            .search-bar {
+                max-width: 100%;
+            }
+            
+            .products-grid {
+                grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <div class="header-content">
+                <div class="logo">🎭 CarnivalCraft</div>
+                <div class="nav-buttons">
+                    <button class="btn btn-outline" onclick="showLogin()">Login</button>
+                    <button class="btn btn-secondary" onclick="showSignup()">Sign Up</button>
+                    <button class="btn btn-primary" onclick="showSellModal()">Sell Item</button>
+                </div>
+            </div>
+        </header>
+
+        <div class="main-content">
+            <aside class="sidebar">
+                <h3>Categories</h3>
+                <ul class="category-list">
+                    <li class="category-item active" data-category="all">All Items</li>
+                    <li class="category-item" data-category="costumes">Costumes</li>
+                    <li class="category-item" data-category="masks">Masks</li>
+                    <li class="category-item" data-category="accessories">Accessories</li>
+                    <li class="category-item" data-category="decorations">Decorations</li>
+                    <li class="category-item" data-category="instruments">Instruments</li>
+                    <li class="category-item" data-category="props">Props</li>
+                </ul>
+            </aside>
+
+            <main class="products-section">
+                <div class="section-header">
+                    <h2>Featured Items</h2>
+                    <div class="search-bar">
+                        <input type="text" class="search-input" placeholder="Search for carnival items...">
+                        <button class="btn btn-primary">Search</button>
+                    </div>
+                </div>
+
+                <div class="products-grid" id="productsGrid">
+                    <!-- Products will be populated by JavaScript -->
+                </div>
+            </main>
+        </div>
+    </div>
+
+    <!-- Floating Add Button -->
+    <button class="floating-add-btn" onclick="showSellModal()" title="Sell an item">+</button>
+
+    <!-- Login Modal -->
+    <div class="modal" id="loginModal">
+        <div class="modal-content">
+            <button class="close-btn" onclick="closeModal('loginModal')">&times;</button>
+            <h2>Login to CarnivalCraft</h2>
+            <form>
+                <div class="form-group">
+                    <label>Email</label>
+                    <input type="email" name="email" required>
+                </div>
+                <div class="form-group">
+                    <label>Password</label>
+                    <input type="password" name="password" required>
+                </div>
+                <button type="submit" class="btn btn-primary" style="width: 100%;">Login</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Signup Modal -->
+    <div class="modal" id="signupModal">
+        <div class="modal-content">
+            <button class="close-btn" onclick="closeModal('signupModal')">&times;</button>
+            <h2>Join CarnivalCraft</h2>
+            <form>
+                <div class="form-group">
+                    <label>Full Name</label>
+                    <input type="text" name="firstName" placeholder="First Name" required>
+                </div>
+                <div class="form-group">
+                    <label>Last Name</label>
+                    <input type="text" name="lastName" placeholder="Last Name" required>
+                </div>
+                <div class="form-group">
+                    <label>Email</label>
+                    <input type="email" name="email" required>
+                </div>
+                <div class="form-group">
+                    <label>Password</label>
+                    <input type="password" name="password" required>
+                </div>
+                <div class="form-group">
+                    <label>Carnival Group</label>
+                    <select name="carnivalGroup" required>
+                        <option value="">Select your carnival group</option>
+                        <option value="antwerp-devils">Antwerp Devils</option>
+                        <option value="brussels-masqueraders">Brussels Masqueraders</option>
+                        <option value="ghent-carnival">Ghent Carnival Society</option>
+                        <option value="aalst-carnivalists">Aalst Carnivalists</option>
+                        <option value="binche-gilles">Binche Gilles</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>City</label>
+                    <input type="text" name="city" placeholder="Your city" required>
+                </div>
+                <button type="submit" class="btn btn-primary" style="width: 100%;">Create Account</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Sell Item Modal -->
+    <div class="modal" id="sellModal">
+        <div class="modal-content">
+            <button class="close-btn" onclick="closeModal('sellModal')">&times;</button>
+            <h2>Sell Your Carnival Item</h2>
+            <form>
+                <div class="form-group">
+                    <label>Item Title</label>
+                    <input type="text" name="title" placeholder="e.g., Venetian Mask with Feathers" required>
+                </div>
+                <div class="form-group">
+                    <label>Category</label>
+                    <select name="categoryId" required>
+                        <option value="">Select category</option>
+                        <option value="costumes">Costumes</option>
+                        <option value="masks">Masks</option>
+                        <option value="accessories">Accessories</option>
+                        <option value="decorations">Decorations</option>
+                        <option value="instruments">Instruments</option>
+                        <option value="props">Props</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>Description</label>
+                    <textarea name="description" rows="4" placeholder="Describe your item, its condition, size, etc." required></textarea>
+                </div>
+                <div class="form-group">
+                    <label>Price (€)</label>
+                    <input type="number" name="price" min="0" step="0.01" placeholder="25.00" required>
+                </div>
+                <div class="form-group">
+                    <label>Condition</label>
+                    <select name="condition" required>
+                        <option value="">Select condition</option>
+                        <option value="new">New</option>
+                        <option value="like-new">Like New</option>
+                        <option value="good">Good</option>
+                        <option value="fair">Fair</option>
+                        <option value="needs-repair">Needs Repair</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>Size (optional)</label>
+                    <input type="text" name="size" placeholder="e.g., Medium, One Size">
+                </div>
+                <div class="form-group">
+                    <label>Color (optional)</label>
+                    <input type="text" name="color" placeholder="e.g., Red, Multi-color">
+                </div>
+                <div class="form-group">
+                    <label>Material (optional)</label>
+                    <input type="text" name="material" placeholder="e.g., Silk, Plastic, Feathers">
+                </div>
+                <button type="submit" class="btn btn-primary" style="width: 100%;">List Item</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Buy Item Modal -->
+    <div class="modal" id="buyModal">
+        <div class="modal-content">
+            <button class="close-btn" onclick="closeModal('buyModal')">&times;</button>
+            <h2>Purchase Item</h2>
+            <div id="buyItemDetails"></div>
+            <form>
+                <div class="form-group">
+                    <label>Shipping Address</label>
+                    <textarea rows="3" placeholder="Your full address" required></textarea>
+                </div>
+                <div class="form-group">
+                    <label>Payment Method</label>
+                    <div class="payment-methods">
+                        <div class="payment-method" data-method="bancontact">
+                            <div>💳</div>
+                            <div>Bancontact</div>
+                        </div>
+                        <div class="payment-method" data-method="visa">
+                            <div>💳</div>
+                            <div>Visa</div>
+                        </div>
+                        <div class="payment-method" data-method="mastercard">
+                            <div>💳</div>
+                            <div>Mastercard</div>
+                        </div>
+                        <div class="payment-method" data-method="paypal">
+                            <div>💰</div>
+                            <div>PayPal</div>
+                        </div>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label>Total Amount</label>
+                    <div style="font-size: 1.2rem; font-weight: bold; color: #ff6b6b;">€<span id="totalAmount">0</span> (includes 5% platform fee)</div>
+                </div>
+                <button type="submit" class="btn btn-primary" style="width: 100%;">Complete Purchase</button>
+            </form>
+        </div>
+    </div>
+
+    <script>
+        // API Configuration
+        const API_BASE = 'http://localhost:3001/api';
+
+        async function apiCall(endpoint, options = {}) {
+            try {
+                const response = await fetch(`${API_BASE}${endpoint}`, {
+                    headers: {
+                        'Content-Type': 'application/json',
+                        ...options.headers
+                    },
+                    ...options
+                });
+                
+                if (!response.ok) {
+                    const errorData = await response.json();
+                    throw new Error(errorData.error || `HTTP error! status: ${response.status}`);
+                }
+                
+                return await response.json();
+            } catch (error) {
+                console.error('API call failed:', error);
+                throw error;
+            }
+        }
+
+        // Load real carnival groups from API
+        async function loadCarnivalGroups() {
+            try {
+                console.log('🎭 Loading carnival groups from API...');
+                const response = await apiCall('/carnival-groups');
+                console.log('Carnival groups response:', response);
+                
+                const groups = response.groups || response;
+                
+                const select = document.querySelector('select[name="carnivalGroup"]');
+                if (select && groups.length > 0) {
+                    // Clear existing options
+                    select.innerHTML = '<option value="">Select your carnival group</option>';
+                    
+                    groups.forEach(group => {
+                        const option = document.createElement('option');
+                        option.value = group.id; // This should be a UUID
+                        option.textContent = `${group.name} - ${group.city}`;
+                        select.appendChild(option);
+                        console.log(`Added group: ${group.name} (ID: ${group.id})`);
+                    });
+                    
+                    console.log(`✅ Loaded ${groups.length} carnival groups`);
+                } else {
+                    console.error('❌ No carnival groups found or select element not found');
+                    console.log('Groups:', groups);
+                    console.log('Select element:', select);
+                }
+            } catch (error) {
+                console.error('❌ Failed to load carnival groups:', error);
+            }
+        }
+
+        // Test backend connection on page load
+        async function testBackendConnection() {
+            try {
+                const response = await apiCall('/health');
+                console.log('✅ Backend connected:', response);
+                
+                // Load carnival groups if backend is connected
+                await loadCarnivalGroups();
+                
+                return true;
+            } catch (error) {
+                console.error('❌ Backend connection failed:', error);
+                return false;
+            }
+        }
+
+        // Sample products data
+        const products = [
+            {
+                id: 1,
+                title: "Venetian Feather Mask",
+                category: "masks",
+                price: 45.00,
+                group: "Brussels Masqueraders",
+                city: "Brussels",
+                emoji: "🎭"
+            },
+            {
+                id: 2,
+                title: "Rainbow Sequin Costume",
+                category: "costumes",
+                price: 120.00,
+                group: "Antwerp Devils",
+                city: "Antwerp",
+                emoji: "👗"
+            },
+            {
+                id: 3,
+                title: "Carnival Drum Set",
+                category: "instruments",
+                price: 85.00,
+                group: "Ghent Carnival Society",
+                city: "Ghent",
+                emoji: "🥁"
+            },
+            {
+                id: 4,
+                title: "LED Light Necklace",
+                category: "accessories",
+                price: 25.00,
+                group: "Aalst Carnivalists",
+                city: "Aalst",
+                emoji: "💡"
+            },
+            {
+                id: 5,
+                title: "Giant Carnival Float Prop",
+                category: "props",
+                price: 200.00,
+                group: "Binche Gilles",
+                city: "Binche",
+                emoji: "🎪"
+            },
+            {
+                id: 6,
+                title: "Traditional Belgian Carnival Hat",
+                category: "accessories",
+                price: 35.00,
+                group: "Brussels Masqueraders",
+                city: "Brussels",
+                emoji: "🎩"
+            }
+        ];
+
+        let currentCategory = 'all';
+        let selectedPaymentMethod = null;
+
+        // Initialize the app
+        function init() {
+            displayProducts();
+            initializeEventListeners();
+        }
+
+        // Display products based on current category
+        function displayProducts() {
+            const grid = document.getElementById('productsGrid');
+            const filteredProducts = currentCategory === 'all' 
+                ? products 
+                : products.filter(p => p.category === currentCategory);
+
+            grid.innerHTML = filteredProducts.map(product => `
+                <div class="product-card" onclick="viewProduct(${product.id})">
+                    <div class="product-image">${product.emoji}</div>
+                    <div class="product-info">
+                        <div class="product-title">${product.title}</div>
+                        <div class="product-group">${product.group} • ${product.city}</div>
+                        <div class="product-price">€${product.price.toFixed(2)}</div>
+                        <div class="product-actions" onclick="event.stopPropagation()">
+                            <button class="btn btn-primary btn-small" onclick="buyProduct(${product.id})">Buy Now</button>
+                            <button class="btn btn-outline btn-small" onclick="contactSeller(${product.id})">Contact</button>
+                        </div>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        // Initialize event listeners
+        function initializeEventListeners() {
+            // Category selection
+            document.querySelectorAll('.category-item').forEach(item => {
+                item.addEventListener('click', function() {
+                    document.querySelector('.category-item.active')?.classList.remove('active');
+                    this.classList.add('active');
+                    currentCategory = this.dataset.category;
+                    displayProducts();
+                });
+            });
+
+            // Payment method selection
+            document.querySelectorAll('.payment-method').forEach(method => {
+                method.addEventListener('click', function() {
+                    document.querySelector('.payment-method.selected')?.classList.remove('selected');
+                    this.classList.add('selected');
+                    selectedPaymentMethod = this.dataset.method;
+                });
+            });
+
+            // Form submissions
+            document.querySelectorAll('form').forEach(form => {
+                form.addEventListener('submit', function(e) {
+                    e.preventDefault();
+                    handleFormSubmission(this);
+                });
+            });
+
+            // Modal close buttons
+            document.querySelectorAll('.close-btn').forEach(btn => {
+                btn.addEventListener('click', function() {
+                    const modal = this.closest('.modal');
+                    closeModal(modal.id);
+                });
+            });
+
+            // Close modals when clicking outside
+            document.querySelectorAll('.modal').forEach(modal => {
+                modal.addEventListener('click', function(e) {
+                    if (e.target === this) {
+                        closeModal(this.id);
+                    }
+                });
+            });
+
+            // Header button event listeners
+            const loginBtn = document.querySelector('button[onclick="showLogin()"]');
+            const signupBtn = document.querySelector('button[onclick="showSignup()"]');
+            const sellBtn = document.querySelector('button[onclick="showSellModal()"]');
+            const floatingBtn = document.querySelector('.floating-add-btn');
+
+            if (loginBtn) {
+                loginBtn.removeAttribute('onclick');
+                loginBtn.addEventListener('click', showLogin);
+            }
+
+            if (signupBtn) {
+                signupBtn.removeAttribute('onclick');
+                signupBtn.addEventListener('click', showSignup);
+            }
+
+            if (sellBtn) {
+                sellBtn.removeAttribute('onclick');
+                sellBtn.addEventListener('click', showSellModal);
+            }
+
+            if (floatingBtn) {
+                floatingBtn.removeAttribute('onclick');
+                floatingBtn.addEventListener('click', showSellModal);
+            }
+        }
+
+        // Modal functions
+        function showModal(modalId) {
+            const modal = document.getElementById(modalId);
+            if (modal) {
+                modal.classList.add('active');
+            }
+        }
+
+        function closeModal(modalId) {
+            const modal = document.getElementById(modalId);
+            if (modal) {
+                modal.classList.remove('active');
+            }
+        }
+
+        function showLogin() {
+            showModal('loginModal');
+        }
+
+        function showSignup() {
+            showModal('signupModal');
+        }
+
+        function showSellModal() {
+            showModal('sellModal');
+        }
+
+        // Product functions
+        function viewProduct(productId) {
+            const product = products.find(p => p.id === productId);
+            if (product) {
+                alert(`Viewing: ${product.title}\nPrice: €${product.price}\nFrom: ${product.group}`);
+            }
+        }
+
+        function buyProduct(productId) {
+            const product = products.find(p => p.id === productId);
+            if (!product) return;
+            
+            const platformFee = product.price * 0.05;
+            const totalAmount = product.price + platformFee;
+            
+            document.getElementById('buyItemDetails').innerHTML = `
+                <div style="padding: 20px; background: #f8f9fa; border-radius: 10px; margin-bottom: 20px;">
+                    <h3>${product.title}</h3>
+                    <p><strong>Seller:</strong> ${product.group}</p>
+                    <p><strong>Location:</strong> ${product.city}</p>
+                    <p><strong>Item Price:</strong> €${product.price.toFixed(2)}</p>
+                    <p><strong>Platform Fee (5%):</strong> €${platformFee.toFixed(2)}</p>
+                    <hr style="margin: 10px 0;">
+                    <p><strong>Total:</strong> €${totalAmount.toFixed(2)}</p>
+                </div>
+            `;
+            
+            document.getElementById('totalAmount').textContent = totalAmount.toFixed(2);
+            showModal('buyModal');
+        }
+
+        function contactSeller(productId) {
+            const product = products.find(p => p.id === productId);
+            if (product) {
+                alert(`Contact ${product.group} about "${product.title}"\n\nIn a real implementation, this would open a messaging system.`);
+            }
+        }
+
+        // Form submission handler
+        async function handleFormSubmission(form) {
+            const formData = new FormData(form);
+            const modalId = form.closest('.modal').id;
+            
+            try {
+                switch(modalId) {
+                    case 'loginModal':
+                        const loginData = {
+                            email: formData.get('email'),
+                            password: formData.get('password')
+                        };
+                        console.log('Login attempt:', loginData.email);
+                        
+                        try {
+                            const response = await apiCall('/auth/login', {
+                                method: 'POST',
+                                body: JSON.stringify(loginData)
+                            });
+                            console.log('Login response:', response);
+                            
+                            if (response.success) {
+                                alert(`Welcome back, ${response.user.firstName}!`);
+                                // Store the token
+                                localStorage.setItem('carnival-token', response.token);
+                                // Update UI to show logged in state
+                                updateAuthUI(true, response.user);
+                            } else {
+                                alert('Login failed. Please check your credentials.');
+                            }
+                        } catch (error) {
+                            console.error('Login API error:', error);
+                            alert(`Login error: ${error.message}`);
+                        }
+                        break;
+                        
+                    case 'signupModal':
+                        const signupData = {
+                            email: formData.get('email'),
+                            password: formData.get('password'),
+                            firstName: formData.get('firstName'),
+                            lastName: formData.get('lastName'),
+                            carnivalGroupId: formData.get('carnivalGroup'),
+                            city: formData.get('city')
+                        };
+                        
+                        console.log('Signup attempt with data:', signupData);
+                        
+                        // Validate required fields on frontend
+                        if (!signupData.email || !signupData.password || !signupData.firstName || !signupData.lastName) {
+                            alert('Please fill in all required fields');
+                            return;
+                        }
+
+                        // Handle carnival group selection
+                        if (!signupData.carnivalGroupId) {
+                            console.log('No carnival group selected, backend will assign default');
+                            signupData.carnivalGroupId = null; // Let backend handle default
+                        } else {
+                            console.log('Selected carnival group ID:', signupData.carnivalGroupId);
+                        }
+                        
+                        try {
+                            // First try the simple test endpoint
+                            console.log('Testing with simple registration...');
+                            const testResponse = await apiCall('/auth/test-register', {
+                                method: 'POST',
+                                body: JSON.stringify({
+                                    email: signupData.email,
+                                    firstName: signupData.firstName,
+                                    lastName: signupData.lastName
+                                })
+                            });
+                            console.log('Test registration response:', testResponse);
+                            
+                            if (testResponse.success) {
+                                // Now try the real registration
+                                console.log('Test successful, trying real registration...');
+                                const response = await apiCall('/auth/register', {
+                                    method: 'POST',
+                                    body: JSON.stringify(signupData)
+                                });
+                                console.log('Real signup response:', response);
+                                
+                                if (response.success) {
+                                    alert(`Welcome to CarnivalCraft, ${response.user.firstName}!`);
+                                    localStorage.setItem('carnival-token', response.token);
+                                    updateAuthUI(true, response.user);
+                                } else {
+                                    alert('Registration failed. Please try again.');
+                                }
+                            }
+                        } catch (error) {
+                            console.error('Signup API error:', error);
+                            alert(`Registration error: ${error.message}`);
+                        }
+                        break;
+                        
+                    case 'sellModal':
+                        // Check if user is logged in
+                        const token = localStorage.getItem('carnival-token');
+                        if (!token) {
+                            alert('Please login to sell items');
+                            closeModal(modalId);
+                            showLogin();
+                            return;
+                        }
+
+                        const productData = {
+                            title: formData.get('title'),
+                            description: formData.get('description'),
+                            price: parseFloat(formData.get('price')),
+                            condition: formData.get('condition'),
+                            categoryId: formData.get('categoryId'),
+                            size: formData.get('size'),
+                            color: formData.get('color'),
+                            material: formData.get('material')
+                        };
+                        
+                        console.log('Creating product:', productData);
+
+                        // Validate required fields
+                        if (!productData.title || !productData.description || !productData.price || !productData.categoryId) {
+                            alert('Please fill in all required fields');
+                            return;
+                        }
+
+                        try {
+                            const response = await apiCall('/products', {
+                                method: 'POST',
+                                headers: {
+                                    'Authorization': `Bearer ${token}`
+                                },
+                                body: JSON.stringify(productData)
+                            });
+                            
+                            console.log('Product creation response:', response);
+                            
+                            if (response.success) {
+                                alert(`Product "${response.product.title}" listed successfully!`);
+                                // Refresh product display
+                                loadRealProducts();
+                            } else {
+                                alert('Failed to create product. Please try again.');
+                            }
+                        } catch (error) {
+                            console.error('Product creation error:', error);
+                            alert(`Error: ${error.message}`);
+                        }
+                        break;
+                        
+                    case 'buyModal':
+                        if (!selectedPaymentMethod) {
+                            alert('Please select a payment method.');
+                            return;
+                        }
+                        console.log('Purchase attempt with:', selectedPaymentMethod);
+                        alert(`Purchase completed successfully using ${selectedPaymentMethod}!\n\nYour item will be shipped to the provided address.`);
+                        break;
+                }
+                
+                closeModal(modalId);
+                form.reset();
+                selectedPaymentMethod = null;
+                document.querySelector('.payment-method.selected')?.classList.remove('selected');
+                
+            } catch (error) {
+                console.error('Form submission error:', error);
+                alert('There was an error processing your request. Please try again.');
+            }
+        }
+
+        // Update authentication UI state
+        function updateAuthUI(isAuthenticated, user = null) {
+            const loginBtn = document.querySelector('button[onclick*="showLogin"]') || 
+                            document.querySelector('.nav-buttons button:nth-child(1)');
+            const signupBtn = document.querySelector('button[onclick*="showSignup"]') || 
+                             document.querySelector('.nav-buttons button:nth-child(2)');
+            const sellBtn = document.querySelector('button[onclick*="showSellModal"]') || 
+                           document.querySelector('.nav-buttons button:nth-child(3)');
+            
+            if (isAuthenticated && user) {
+                // Hide login/signup, show user menu
+                if (loginBtn) loginBtn.style.display = 'none';
+                if (signupBtn) signupBtn.style.display = 'none';
+                if (sellBtn) sellBtn.style.display = 'inline-block';
+
+                // Show user greeting
+                const existingGreeting = document.querySelector('.user-greeting');
+                if (!existingGreeting) {
+                    const userGreeting = document.createElement('span');
+                    userGreeting.className = 'user-greeting';
+                    userGreeting.textContent = `Welcome, ${user.firstName}!`;
+                    userGreeting.style.cssText = 'margin-right: 15px; color: #333; font-weight: 600;';
+                    
+                    if (loginBtn && loginBtn.parentNode) {
+                        loginBtn.parentNode.insertBefore(userGreeting, loginBtn);
+                    }
+                }
+            } else {
+                // Show login/signup, hide sell button
+                if (loginBtn) loginBtn.style.display = 'inline-block';
+                if (signupBtn) signupBtn.style.display = 'inline-block';
+                if (sellBtn) sellBtn.style.display = 'none';
+                
+                // Remove user greeting
+                const existingGreeting = document.querySelector('.user-greeting');
+                if (existingGreeting) {
+                    existingGreeting.remove();
+                }
+            }
+        }
+
+        // Initialize the app when page loads
+        document.addEventListener('DOMContentLoaded', async () => {
+            console.log('🚀 Initializing Carnival Marketplace...');
+            
+            // Test backend connection
+            const backendConnected = await testBackendConnection();
+            if (backendConnected) {
+                console.log('✅ Full-stack mode: Backend connected');
+                // Load carnival groups after backend connection is confirmed
+                try {
+                    await loadCarnivalGroups();
+                    await loadCategories();
+                    await loadRealProducts();
+                } catch (error) {
+                    console.error('Failed to load data:', error);
+                }
+            } else {
+                console.log('⚠️ Frontend-only mode: Backend not available');
+            }
+            
+            // Initialize the rest of the app
+            init();
+        });
+    </script>
+</body>
+</html>
