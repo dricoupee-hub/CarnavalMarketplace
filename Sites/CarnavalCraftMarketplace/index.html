@@ -900,8 +900,48 @@
             showModal('signupModal');
         }
 
+        // Load categories specifically for the sell modal
+        async function loadCategoriesInModal() {
+            try {
+                console.log('📂 Loading categories for sell modal...');
+                const response = await apiCall('/categories');
+                console.log('Categories response for modal:', response);
+                
+                const categories = response.categories || response;
+                
+                // Find the select element in the sell modal specifically
+                const sellModal = document.getElementById('sellModal');
+                const select = sellModal.querySelector('select[name="categoryId"]');
+                
+                console.log('Category select element found:', !!select);
+                
+                if (select && categories.length > 0) {
+                    // Clear existing options
+                    select.innerHTML = '<option value="">Select category</option>';
+                    
+                    categories.forEach(category => {
+                        const option = document.createElement('option');
+                        option.value = category.id;  // This should be the UUID
+                        option.textContent = `${category.emoji || '📦'} ${category.name}`;
+                        select.appendChild(option);
+                        console.log(`Added category: ${category.name} (UUID: ${category.id})`);
+                    });
+                    
+                    console.log(`✅ Loaded ${categories.length} categories in sell modal`);
+                } else {
+                    console.error('❌ No categories found or select element not found in sell modal');
+                    console.log('Categories:', categories);
+                    console.log('Select element:', select);
+                }
+            } catch (error) {
+                console.error('❌ Failed to load categories for sell modal:', error);
+            }
+        }
+
         function showSellModal() {
             showModal('sellModal');
+            // Load categories when modal opens
+            loadCategoriesInModal();
         }
 
         // Product functions
@@ -1043,11 +1083,21 @@
                     case 'sellModal':
                         // Check if user is logged in
                         const token = localStorage.getItem('carnival-token');
+                        console.log('Token check:', token ? 'Token exists' : 'No token found');
+                        console.log('Token value:', token);
+                        
                         if (!token) {
                             alert('Please login to sell items');
                             closeModal(modalId);
                             showLogin();
                             return;
+                        }
+
+                        // Debug FormData
+                        console.log('Form element:', form);
+                        console.log('FormData entries:');
+                        for (let [key, value] of formData.entries()) {
+                            console.log(`${key}: ${value}`);
                         }
 
                         const productData = {
@@ -1061,35 +1111,105 @@
                             material: formData.get('material')
                         };
                         
-                        console.log('Creating product:', productData);
+                        console.log('Creating product with data:', productData);
+                        console.log('Individual field check:');
+                        console.log('- title:', productData.title);
+                        console.log('- description:', productData.description);
+                        console.log('- price:', productData.price);
+                        console.log('- categoryId:', productData.categoryId);
 
                         // Validate required fields
                         if (!productData.title || !productData.description || !productData.price || !productData.categoryId) {
+                            console.error('Missing required fields:');
+                            console.error('- title missing:', !productData.title);
+                            console.error('- description missing:', !productData.description);
+                            console.error('- price missing:', !productData.price);
+                            console.error('- categoryId missing:', !productData.categoryId);
                             alert('Please fill in all required fields');
                             return;
                         }
 
                         try {
-                            const response = await apiCall('/products', {
+                            console.log('🚀 About to call API directly with product data:', productData);
+                            
+                            const token = localStorage.getItem('carnival-token');
+                            console.log('🚀 Token for direct call:', token ? 'Found' : 'Missing');
+                            
+                            const response = await fetch(`${API_BASE}/products`, {
                                 method: 'POST',
                                 headers: {
+                                    'Content-Type': 'application/json',
                                     'Authorization': `Bearer ${token}`
                                 },
                                 body: JSON.stringify(productData)
                             });
                             
-                            console.log('Product creation response:', response);
+                            console.log('🚀 Response status:', response.status);
                             
-                            if (response.success) {
-                                alert(`Product "${response.product.title}" listed successfully!`);
-                                // Refresh product display
-                                loadRealProducts();
+                            if (!response.ok) {
+                                const errorData = await response.json();
+                                throw new Error(errorData.error || `HTTP error! status: ${response.status}`);
+                            }
+                            
+                            const data = await response.json();
+                            console.log('✅ Product creation response:', data);
+                            
+                            if (data.success) {
+                                alert(`Product "${data.product.title}" listed successfully!`);
+                                
+                                // Refresh product display - try multiple approaches
+                                console.log('🔄 Attempting to refresh products...');
+                                
+                                try {
+                                    if (typeof window.loadRealProducts === 'function') {
+                                        console.log('✅ Using window.loadRealProducts');
+                                        await window.loadRealProducts();
+                                    } else if (typeof loadRealProducts === 'function') {
+                                        console.log('✅ Using direct loadRealProducts');
+                                        await loadRealProducts();
+                                    } else {
+                                        console.log('⚠️ loadRealProducts not available, refreshing manually');
+                                        // Manual refresh
+                                        const productsResponse = await fetch(`${API_BASE}/products`);
+                                        const productsData = await productsResponse.json();
+                                        const apiProducts = productsData.products || [];
+                                        
+                                        console.log(`📦 Found ${apiProducts.length} real products from API`);
+                                        
+                                        if (apiProducts.length > 0) {
+                                            // Clear and repopulate with real products
+                                            products.length = 0;
+                                            apiProducts.forEach(product => {
+                                                products.push({
+                                                    id: product.id,
+                                                    title: product.title,
+                                                    category: product.Category?.slug || 'general',
+                                                    price: parseFloat(product.price),
+                                                    group: product.seller?.CarnivalGroup?.name || 'Unknown Group',
+                                                    city: product.seller?.CarnivalGroup?.city || 'Unknown City',
+                                                    emoji: product.Category?.emoji || '🎭',
+                                                    seller: `${product.seller?.firstName} ${product.seller?.lastName}`
+                                                });
+                                            });
+                                            console.log('✅ Replaced with real products');
+                                        } else {
+                                            console.log('⚠️ No real products found, keeping sample products');
+                                        }
+                                        
+                                        // Refresh display
+                                        displayProducts();
+                                        console.log('✅ Manual refresh completed');
+                                    }
+                                } catch (refreshError) {
+                                    console.error('❌ Error refreshing products:', refreshError);
+                                }
                             } else {
                                 alert('Failed to create product. Please try again.');
                             }
                         } catch (error) {
-                            console.error('Product creation error:', error);
-                            alert(`Error: ${error.message}`);
+                            console.error('❌ Product creation error:', error);
+                            console.error('❌ Error stack:', error.stack);
+                            alert(`Error creating product: ${error.message}`);
                         }
                         break;
                         
@@ -1155,28 +1275,82 @@
             }
         }
 
+        // Initialize data loading after all functions are defined
+        async function initializeData() {
+            console.log('📊 Initializing data...');
+            
+            try {
+                // Load carnival groups
+                console.log('🎭 Loading carnival groups...');
+                const groupsResponse = await apiCall('/carnival-groups');
+                const groups = groupsResponse.groups || groupsResponse;
+                const groupSelect = document.querySelector('select[name="carnivalGroup"]');
+                if (groupSelect && groups.length > 0) {
+                    groupSelect.innerHTML = '<option value="">Select your carnival group</option>';
+                    groups.forEach(group => {
+                        const option = document.createElement('option');
+                        option.value = group.id;
+                        option.textContent = `${group.name} - ${group.city}`;
+                        groupSelect.appendChild(option);
+                    });
+                    console.log(`✅ Loaded ${groups.length} carnival groups`);
+                }
+                
+                // Load categories (will be used when sell modal opens)
+                console.log('📂 Categories will load when sell modal opens');
+                
+                // Load real products
+                console.log('📦 Loading real products...');
+                const productsResponse = await apiCall('/products');
+                const apiProducts = productsResponse.products || [];
+                
+                if (apiProducts.length > 0) {
+                    console.log(`📦 Found ${apiProducts.length} real products, replacing sample data`);
+                    
+                    // Replace sample products with real ones
+                    products.length = 0;
+                    
+                    apiProducts.forEach(product => {
+                        products.push({
+                            id: product.id,
+                            title: product.title,
+                            category: product.Category?.slug || 'general',
+                            price: parseFloat(product.price),
+                            group: product.seller?.CarnivalGroup?.name || 'Unknown Group',
+                            city: product.seller?.CarnivalGroup?.city || 'Unknown City',
+                            emoji: product.Category?.emoji || '🎭',
+                            seller: `${product.seller?.firstName} ${product.seller?.lastName}`
+                        });
+                    });
+                    
+                    displayProducts(); // Refresh the display
+                    console.log(`✅ Loaded ${apiProducts.length} real products and displayed them`);
+                } else {
+                    console.log('📦 No real products found, keeping sample data');
+                }
+                
+                console.log('✅ All data initialization complete');
+            } catch (error) {
+                console.error('❌ Failed to load data:', error);
+            }
+        }
+
         // Initialize the app when page loads
         document.addEventListener('DOMContentLoaded', async () => {
             console.log('🚀 Initializing Carnival Marketplace...');
+            
+            // Initialize the UI first
+            init();
             
             // Test backend connection
             const backendConnected = await testBackendConnection();
             if (backendConnected) {
                 console.log('✅ Full-stack mode: Backend connected');
-                // Load carnival groups after backend connection is confirmed
-                try {
-                    await loadCarnivalGroups();
-                    await loadCategories();
-                    await loadRealProducts();
-                } catch (error) {
-                    console.error('Failed to load data:', error);
-                }
+                // Load data after everything is set up
+                setTimeout(initializeData, 100); // Small delay to ensure all functions are ready
             } else {
                 console.log('⚠️ Frontend-only mode: Backend not available');
             }
-            
-            // Initialize the rest of the app
-            init();
         });
     </script>
 </body>
